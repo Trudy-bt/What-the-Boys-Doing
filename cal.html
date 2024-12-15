@@ -53,6 +53,7 @@
       padding: 10px 0;
       background: #eee;
       margin: 0;
+      min-height: 250px;
     }
 
     .days li {
@@ -61,7 +62,7 @@
       width: 13.6%;
       text-align: center;
       margin-bottom: 5px;
-      font-size: 12px;
+      font-size: 25px;
       color: #777;
       cursor: pointer;
       position: relative;
@@ -92,32 +93,38 @@
       transform: translateX(-50%);
       width: 6px;
       height: 6px;
-      background-color: purple; /* Lavender for proposals */
+      background-color: var(--proposal-color); /* Lavender for proposals */
       border-radius: 50%;
     }
 
-    #event-container {
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      background-color: #f9f9f9;
+    .container {
+      display: flex;
+      gap: 20px;
+      margin: 20px;
     }
 
-    #event-container h2 {
+    .table {
+      flex: 1;
+      border: 1px solid #ccc;
+      padding: 10px;
+      background-color: #d0f4de;
+    }
+
+    .table h2 {
       margin: 0 0 10px;
     }
 
-    #event-list {
+    #event-list, #proposal-list {
       list-style-type: none;
       padding: 0;
     }
 
-    #event-list li {
+    #event-list li, #proposal-list li {
       padding: 5px 0;
       border-bottom: 1px solid #ddd;
     }
 
-    #event-list li:last-child {
+    #event-list li:last-child, #proposal-list li:last-child {
       border-bottom: none;
     }
 
@@ -207,10 +214,20 @@
   <!-- Days will be dynamically generated -->
 </ul>
 
-<div id="event-container">
-  <h2>Planned Events for <span id="selected-month">[Month, Year]</span></h2>
-  <ul id="event-list"></ul>
+<div class="container">
+  <!-- Events Table -->
+  <div class="table">
+    <h2>Planned Events for <span id="selected-month">[Month, Year]</span></h2>
+    <ul id="event-list"></ul>
+  </div>
+
+  <!-- Proposed Events Table -->
+  <div class="table">
+    <h2>Proposed Events for <span id="selected-month-proposals">[Month, Year]</span></h2>
+    <ul id="proposal-list"></ul>
+  </div>
 </div>
+
 
 <!-- Status Section -->
 <div id="statuses">
@@ -218,19 +235,19 @@
     <h3>Trudy</h3>
     <textarea id="status-input-1" rows="3" placeholder="Speak your mind 🗣️..."></textarea>
     <button onclick="updateStatus(1)">Post</button>
-    <p id="current-status-1"><em>No status yet</em></p>
+    <p id="current-status-1"><em>No status yet bro should speak up</em></p>
   </div>
   <div class="status-person">
     <h3>Sinners</h3>
     <textarea id="status-input-2" rows="3" placeholder="Is u up? 🗣️..."></textarea>
     <button onclick="updateStatus(2)">Post</button>
-    <p id="current-status-2"><em>No status yet</em></p>
+    <p id="current-status-2"><em>No status yet bro should speak up</em></p>
   </div>
   <div class="status-person">
     <h3>Brandon</h3>
     <textarea id="status-input-3" rows="3" placeholder="English please 🗣️..."></textarea>
     <button onclick="updateStatus(3)">Post</button>
-    <p id="current-status-3"><em>No status yet</em></p>
+    <p id="current-status-3"><em>No status yet bro should speak up</em></p>
   </div>
 </div>
 
@@ -240,14 +257,16 @@
     "July", "August", "September", "October", "November", "December"
   ];
 
-  let currentYear = 2025;
-  let currentMonth = 0; // January
+  let currentDate = new Date();
+  let currentYear = currentDate.getFullYear();
+  let currentMonth = currentDate.getMonth();
   const events = {}; // Confirmed Events storage
   const proposals = {}; //Proposed dates storage
   const statuses = { 1: "", 2: "", 3: "" }; // Status storage for 3 people
 
   let isProposing = false;
   let currentProposalText = "";
+  let proposalColors = {};
 
   function generateCalendar(year, month) {
     const daysContainer = document.getElementById("days");
@@ -257,6 +276,7 @@
 
     document.getElementById("month-name").innerHTML = `${monthNames[month]}<br><span>${year}</span>`;
     document.getElementById("selected-month").textContent = `${monthNames[month]} ${year}`;
+    document.getElementById("selected-month-proposals").textContent = `${monthNames[month]} ${year}`;
 
     for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
       const blank = document.createElement("li");
@@ -274,6 +294,7 @@
       }
       else if (proposals[dateKey]) {
         dayElement.classList.add("proposal")
+        dayElement.style.setProperty("--proposal-color", proposalColors[proposals[dateKey].text]);
       }
 
       dayElement.onclick = () => handleDayClick(dateKey);
@@ -281,6 +302,7 @@
     }
 
     displayEvents(year, month);
+    displayProposals(year, month);
   }
 
   function handleDayClick(dateKey) {
@@ -305,16 +327,17 @@
   }
 
   function startProposal() {
-    currentProposalText = prompt("Enter the event name:");
+    currentProposalText = prompt("Enter event name:");
     if (currentProposalText) {
       isProposing = true;
+      proposalColors[currentProposalText] = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
       alert("Click on the dates to propose. Press 'Done' when finished.");
     }
   }
 
   function endProposal() {
     isProposing = false;
-    alert("Event proposal process finished!");
+    alert("Proposal process finished!");
     generateCalendar(currentYear, currentMonth);
   }
 
@@ -330,6 +353,44 @@
         eventList.appendChild(item);
       }
     }
+  }
+
+  function displayProposals(year, month) {
+  const proposalList = document.getElementById("proposal-list");
+  proposalList.innerHTML = ""; // Clear the proposal list
+
+  const proposalMap = {}; // Temporary map to group proposals by name
+
+  // Group proposals based on their text
+  for (const [dateKey, proposal] of Object.entries(proposals)) {
+    const [y, m] = dateKey.split("-").map(Number);
+    if (y === year && m === month + 1) {
+      if (!proposalMap[proposal.text]) proposalMap[proposal.text] = [];
+      proposalMap[proposal.text].push(dateKey);
+    }
+  }
+
+  // Display proposals in the table
+  for (const [proposalText, dates] of Object.entries(proposalMap)) {
+    const listItem = document.createElement("li");
+    const color = proposalColors[proposalText] || "purple";
+    listItem.style.color = color;
+    listItem.textContent = `${proposalText}: ${dates.join(", ")}`;
+    proposalList.appendChild(listItem);
+  }
+}
+
+
+function changeMonth(direction) {
+    currentMonth += direction;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    } else if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    generateCalendar(currentYear, currentMonth);
   }
 
   function updateStatus(person) {
